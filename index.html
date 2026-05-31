@@ -1,0 +1,303 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans, system-ui); color: var(--color-text-primary, #111); background: transparent; padding: 1.5rem 0; }
+
+.header { margin-bottom: 1.5rem; }
+.header h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+.header p { font-size: 14px; color: var(--color-text-secondary, #666); }
+
+.drop-zone {
+  border: 1.5px dashed var(--color-border-secondary, #ccc);
+  border-radius: 12px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--color-background-secondary, #f9f9f9);
+  position: relative;
+}
+.drop-zone.drag-over {
+  border-color: var(--color-border-primary, #888);
+  background: var(--color-background-primary, #fff);
+}
+.drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-icon { font-size: 28px; color: var(--color-text-tertiary, #aaa); margin-bottom: 10px; }
+.drop-label { font-size: 15px; font-weight: 500; color: var(--color-text-primary, #111); margin-bottom: 4px; }
+.drop-sub { font-size: 13px; color: var(--color-text-secondary, #666); }
+
+.filename-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--color-background-primary, #fff);
+  border: 0.5px solid var(--color-border-tertiary, #e0e0e0);
+  border-radius: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.filename-bar .name { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scan-btn {
+  padding: 7px 18px; font-size: 13px; font-weight: 500;
+  background: var(--color-text-primary, #111);
+  color: var(--color-background-primary, #fff);
+  border: none; border-radius: 6px; cursor: pointer;
+}
+.scan-btn:hover { opacity: 0.82; }
+.scan-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.results { margin-top: 1.5rem; }
+
+.summary-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem;
+}
+.stat {
+  background: var(--color-background-secondary, #f5f5f5);
+  border-radius: 8px; padding: 14px 12px;
+}
+.stat-label { font-size: 11px; color: var(--color-text-secondary, #666); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-val { font-size: 22px; font-weight: 500; }
+.stat-val.safe { color: #1D9E75; }
+.stat-val.danger { color: #D85A30; }
+.stat-val.warn { color: #BA7517; }
+
+.section-label { font-size: 12px; font-weight: 500; color: var(--color-text-secondary, #666); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; margin-top: 1.25rem; }
+
+.finding {
+  border: 0.5px solid var(--color-border-tertiary, #e0e0e0);
+  border-radius: 8px; overflow: hidden; margin-bottom: 8px;
+}
+.finding-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 13px;
+  background: var(--color-background-secondary, #f5f5f5);
+}
+.badge {
+  font-size: 10px; font-weight: 600; padding: 2px 7px;
+  border-radius: 20px; letter-spacing: 0.03em;
+}
+.badge.high { background: #FAECE7; color: #993C1D; }
+.badge.med { background: #FAEEDA; color: #854F0B; }
+.badge.low { background: #E6F1FB; color: #185FA5; }
+.finding-title { font-size: 13px; font-weight: 500; }
+.finding-body { padding: 9px 13px; }
+.finding-desc { font-size: 13px; color: var(--color-text-secondary, #666); margin-bottom: 6px; line-height: 1.5; }
+.finding-detail {
+  font-size: 12px; font-family: var(--font-mono, monospace);
+  background: var(--color-background-secondary, #f5f5f5);
+  border: 0.5px solid var(--color-border-tertiary, #e0e0e0);
+  border-radius: 6px; padding: 7px 10px;
+  color: var(--color-text-primary, #111);
+  white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow-y: auto;
+}
+
+.runs-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+.runs-table th { text-align: left; padding: 5px 8px; background: var(--color-background-secondary, #f5f5f5); font-weight: 500; color: var(--color-text-secondary, #666); border-bottom: 0.5px solid var(--color-border-tertiary, #e0e0e0); }
+.runs-table td { padding: 5px 8px; border-bottom: 0.5px solid var(--color-border-tertiary, #e0e0e0); vertical-align: top; }
+.runs-table tr:last-child td { border-bottom: none; }
+.run-text { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flag-high { color: #D85A30; font-weight: 500; }
+.flag-med { color: #BA7517; font-weight: 500; }
+
+.clean { text-align: center; padding: 2rem 0; }
+.clean-icon { font-size: 32px; color: #1D9E75; margin-bottom: 8px; }
+.clean-title { font-size: 15px; font-weight: 500; }
+.clean-sub { font-size: 13px; color: var(--color-text-secondary, #666); margin-top: 4px; }
+
+.error-msg { color: #D85A30; font-size: 14px; padding: 1rem 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Hidden prompt detector</h1>
+  <p>Upload a .docx file to scan for hidden AI instructions — invisible font sizes, white text, injection phrases, and more.</p>
+</div>
+
+<div class="drop-zone" id="dropZone">
+  <input type="file" id="fileInput" accept=".docx" />
+  <div class="drop-icon">📄</div>
+  <div class="drop-label">Drop your .docx file here</div>
+  <div class="drop-sub">or click to browse — Word documents only</div>
+</div>
+
+<div id="fileBar" style="display:none" class="filename-bar">
+  <span>📄</span>
+  <span class="name" id="fileName"></span>
+  <button class="scan-btn" id="scanBtn" onclick="runScan()">Scan document</button>
+</div>
+
+<div class="results" id="results" style="display:none"></div>
+
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileBar = document.getElementById('fileBar');
+const fileName = document.getElementById('fileName');
+const results = document.getElementById('results');
+let currentFile = null;
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.docx')) loadFile(f);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) loadFile(fileInput.files[0]);
+});
+
+function loadFile(f) {
+  currentFile = f;
+  fileName.textContent = f.name;
+  fileBar.style.display = 'flex';
+  results.style.display = 'none';
+}
+
+async function runScan() {
+  if (!currentFile) return;
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true; btn.textContent = 'Scanning...';
+
+  try {
+    const ab = await currentFile.arrayBuffer();
+    const zip = await JSZip.loadAsync(ab);
+    const docXml = await zip.file('word/document.xml')?.async('string');
+    if (!docXml) throw new Error('Could not read document.xml — is this a valid .docx?');
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(docXml, 'application/xml');
+
+    const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    const runs = doc.getElementsByTagNameNS(W, 'r');
+
+    const findings = [];
+    const suspiciousRuns = [];
+
+    const INVISIBLE_FONT_MAX = 12;
+    const WHITE_COLORS = new Set(['FFFFFF','ffffff','white','FEFEFE','fefefe','FFFFFE','fffffe','F8F8F8','f8f8f8','FAFAFA','fafafa']);
+
+    let totalRuns = 0;
+    let hiddenFontCount = 0;
+    let whiteTextCount = 0;
+    let injectionCount = 0;
+
+    for (const run of runs) {
+      totalRuns++;
+      const rPr = run.getElementsByTagNameNS(W, 'rPr')[0];
+      const tEl = run.getElementsByTagNameNS(W, 't')[0];
+      const text = tEl ? tEl.textContent : '';
+
+      let flags = [];
+
+      if (rPr) {
+        const szEl = rPr.getElementsByTagNameNS(W, 'sz')[0];
+        const szCsEl = rPr.getElementsByTagNameNS(W, 'szCs')[0];
+        const colorEl = rPr.getElementsByTagNameNS(W, 'color')[0];
+        const vanishEl = rPr.getElementsByTagNameNS(W, 'vanish')[0];
+        const highlightEl = rPr.getElementsByTagNameNS(W, 'highlight')[0];
+
+        if (szEl) {
+          const halfPts = parseInt(szEl.getAttribute('w:val') || '0', 10);
+          const pts = halfPts / 2;
+          if (halfPts > 0 && pts < INVISIBLE_FONT_MAX && text.trim().length > 0) {
+            flags.push({ type: 'font-size', severity: pts <= 4 ? 'high' : 'med', detail: pts + 'pt font' });
+            hiddenFontCount++;
+          }
+        }
+
+        if (colorEl) {
+          const col = (colorEl.getAttribute('w:val') || '').replace('#','');
+          if (WHITE_COLORS.has(col) && text.trim().length > 0) {
+            flags.push({ type: 'white-text', severity: 'high', detail: 'color: #' + col });
+            whiteTextCount++;
+          }
+          const r2 = parseInt(col.slice(0,2),16);
+          const g2 = parseInt(col.slice(2,4),16);
+          const b2 = parseInt(col.slice(4,6),16);
+          if (!isNaN(r2) && r2 > 230 && g2 > 230 && b2 > 230 && !WHITE_COLORS.has(col) && text.trim().length > 0) {
+            flags.push({ type: 'near-white-text', severity: 'med', detail: 'near-white color: #' + col });
+            whiteTextCount++;
+          }
+        }
+
+        if (vanishEl) {
+          flags.push({ type: 'vanish', severity: 'high', detail: 'w:vanish — text set to hidden in Word' });
+          hiddenFontCount++;
+        }
+      }
+
+      const injectionPatterns = [
+        { re: /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?)/i, label: 'Ignore-previous injection' },
+        { re: /disregard\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?)/i, label: 'Disregard injection' },
+        { re: /include\s+the\s+(word|phrase)\s+["']?\w+["']?/i, label: 'Canary word trap' },
+        { re: /give\s+(this|the).{0,20}(grade|score|mark)\s+of\s+(a|an?\s+)?[a-f]\+?/i, label: 'Grade manipulation' },
+        { re: /say\s+(that\s+)?(this|the).{0,30}(is\s+)?(excellent|perfect|outstanding|original)/i, label: 'Quality override command' },
+        { re: /do\s+not\s+(mention|say|tell|reveal|include|discuss)\s+/i, label: 'Suppression command' },
+        { re: /always\s+(say|respond|reply|include|write|give|mention)\s+/i, label: 'Response override command' },
+        { re: /you\s+are\s+now\s+(a\s+|an?\s+)?/i, label: 'Role override ("you are now")' },
+        { re: /act\s+as\s+(if\s+)?you\s+(are|were)\s+/i, label: '"Act as" reassignment' },
+        { re: /###\s*(instruction|system|prompt|override)/i, label: 'System prompt header injection' },
+        { re: /for\s+(the\s+purposes?\s+of\s+)?this\s+(essay|assignment|response).{0,40}(ai|gpt|claude|model|assistant)/i, label: 'AI-targeted conditional' },
+      ];
+
+      for (const p of injectionPatterns) {
+        if (p.re.test(text)) {
+          flags.push({ type: 'injection', severity: 'high', detail: p.label + ': "' + text.slice(0,80) + '"' });
+          injectionCount++;
+        }
+      }
+
+      if (flags.length > 0) {
+        suspiciousRuns.push({ text: text.slice(0, 60) || '(empty)', flags });
+      }
+    }
+
+    const totalThreats = hiddenFontCount + whiteTextCount + injectionCount;
+
+    let html = '<div class="summary-grid">';
+    html += '<div class="stat"><div class="stat-label">Text runs</div><div class="stat-val">' + totalRuns + '</div></div>';
+    html += '<div class="stat"><div class="stat-label">Threats found</div><div class="stat-val ' + (totalThreats > 0 ? 'danger' : 'safe') + '">' + totalThreats + '</div></div>';
+    html += '<div class="stat"><div class="stat-label">Hidden text</div><div class="stat-val ' + (hiddenFontCount > 0 ? 'danger' : 'safe') + '">' + hiddenFontCount + '</div></div>';
+    html += '<div class="stat"><div class="stat-label">White/near-white</div><div class="stat-val ' + (whiteTextCount > 0 ? 'danger' : 'safe') + '">' + whiteTextCount + '</div></div>';
+    html += '</div>';
+
+    if (suspiciousRuns.length === 0) {
+      html += '<div class="clean"><div class="clean-icon">✓</div><div class="clean-title">No hidden commands detected</div><div class="clean-sub">All text runs appear at normal sizes and colors. No injection phrases found.</div></div>';
+    } else {
+      html += '<div class="section-label">Flagged text runs (' + suspiciousRuns.length + ')</div>';
+
+      const high = suspiciousRuns.filter(r => r.flags.some(f => f.severity === 'high'));
+      const med = suspiciousRuns.filter(r => !r.flags.some(f => f.severity === 'high'));
+
+      const renderRuns = (arr) => arr.map(run => {
+        const topFlag = run.flags.find(f => f.severity === 'high') || run.flags[0];
+        const sev = topFlag.severity;
+        return '<div class="finding"><div class="finding-head"><span class="badge ' + sev + '">' + sev.toUpperCase() + '</span><span class="finding-title">' + topFlag.detail.split(':')[0] + '</span></div><div class="finding-body">' +
+          run.flags.map(f => '<div class="finding-desc">' + f.detail + '</div>').join('') +
+          '<div class="finding-detail">Text: ' + (run.text || '(no visible text)') + '</div>' +
+          '</div></div>';
+      }).join('');
+
+      if (high.length > 0) html += renderRuns(high);
+      if (med.length > 0) { html += '<div class="section-label" style="margin-top:1rem">Warnings</div>'; html += renderRuns(med); }
+    }
+
+    results.innerHTML = html;
+    results.style.display = 'block';
+
+  } catch(err) {
+    results.innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
+    results.style.display = 'block';
+  }
+
+  btn.disabled = false; btn.textContent = 'Scan document';
+}
+</script>
+</body>
+</html>
