@@ -1,23 +1,31 @@
 # flagkeys
-Hidden prompt detector for .docx files — detects invisible font sizes, white text, and injection phrases embedded in academic documents.
 
-Professors and instructors increasingly embed invisible instructions inside assignment prompts — using white text, microscopic font sizes, or zero-width characters — designed to manipulate AI tools that students use. These traps are invisible to the human eye but readable by AI models like ChatGPT and Claude.
+A browser-based inspector for Word (.docx) files. Flagkeys shows text that is stored in a document but may not be visible when reading it.
 
-Flagkeys detects these hidden commands before they affect your work.
+A document can hold more than what appears on the page. Very small type, white text, hidden formatting, and invisible Unicode characters are all still part of the file, and software that reads the file will pick them up. Flagkeys lists these so you can see the whole document.
 
-## What it detects
+## What it checks
 
-- Font sizes under 12pt — including 0pt, 1pt, 2pt and other humanly invisible sizes
-- White and near-white text colors designed to blend into document backgrounds
-- Zero-width and invisible unicode characters embedded between words
-- Word's native vanish/hidden text property (w:vanish)
-- Natural language prompt injection phrases targeting AI behavior
-- Homoglyph substitutions — Cyrillic or Greek characters disguised as Latin letters
+- Font sizes under 12pt, with very small sizes ranked highest
+- White and near-white text colors
+- Word's hidden text property (`w:vanish`)
+- Zero-width, invisible, and text-direction Unicode characters
+- Phrases commonly used in prompt injection
+
+It reads the document body, headers, footers, footnotes, endnotes, and comments.
+
+A flag means something is worth a look. It says nothing about why the text is there, and small print or invisible characters often have ordinary explanations.
 
 ## How it works
 
-Flagkeys reads the raw XML structure of .docx files directly in the browser. A .docx file is a ZIP archive containing XML — Flagkeys unzips it client-side and inspects every text run for suspicious formatting properties. No file is ever uploaded to a server. Everything happens locally in your browser.
+A .docx file is a ZIP archive containing XML. Flagkeys unzips it in the browser and inspects the formatting and content of each text run. Files are processed locally and are not uploaded to a server.
+
+## Limitations
+
+- Text inside images is not checked
+- Formatting inherited from Word styles, rather than applied directly to text, may not be detected
+- Only Word's XML-based formats are supported, not PDF or legacy .doc files
 
 ## Status
 
-Early development. Built and originated by Zephyruzz. Copyright 2026 [Mannan Vishal Pandya].
+Early development. Built by Zephyruzz. Copyright 2026 [Mannan Vishal Pandya].
