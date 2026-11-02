@@ -5,20 +5,23 @@ Conceived and built by Zephyruzz ([Mannan Vishal Pandya]), 2026.
 This document records the original concept and technical approach for Flagkeys.
 
 ## Background
-Word documents can contain text that does not appear, or is hard to notice, when the document is read normally. Software that processes the file's contents still receives this text. Examples include:
+Files can contain content that does not appear, or is hard to notice, when they are opened normally. Software that processes a file still receives this content. Examples include:
 
 - White or near-white colored text on a white background
 - Very small font sizes
-- Microsoft Word's native vanish/hidden text property
+- Hidden text properties, such as Microsoft Word's vanish property
 - Zero-width unicode characters between visible words
 - Text-direction control characters
 
 ## The Idea
-Flagkeys is a browser-based tool that shows this kind of content so a reader can see everything a document contains.
+Flagkeys is a browser-based file inspector that shows this kind of content so a person can see everything a file contains.
 
-The user selects a .docx file. Flagkeys unzips the file client-side — a .docx is a ZIP archive containing XML — and inspects each text run in the document's XML structure. No file is sent to a server. All processing happens locally in the browser.
+The long-term goal is to support almost any file type, using the same approach throughout: read the file's underlying structure rather than its on-screen appearance, and do all processing locally in the browser. No file is sent to a server.
 
-## Technical Approach
+## Current Scope
+The first supported format is .docx, the only one available today. Flagkeys unzips the file client-side — a .docx is a ZIP archive containing XML — and inspects each text run in the document's XML structure.
+
+## Technical Approach for .docx
 - Parse word/document.xml and related parts from the .docx ZIP archive using JSZip
 - Walk every text run element (w:r) in the document XML
 - Flag runs where the w:sz value indicates a font size below 12pt
@@ -27,11 +30,17 @@ The user selects a .docx file. Flagkeys unzips the file client-side — a .docx 
 - Flag text matching known prompt injection phrases
 - Flag zero-width, invisible, and text-direction unicode characters
 
-## Possible Future Work
-- Homoglyph detection: non-Latin characters that resemble Latin letters
+## Future Direction
+Planned, not yet built:
+
+- Documents: PDF, legacy .doc, RTF, OpenDocument
+- Presentations and spreadsheets: PowerPoint and Excel, including hidden slides, rows, and sheets
+- Web and text: HTML, Markdown, plain text, and other text formats
+- Images: text embedded in images, and file metadata
+- Detection: homoglyphs (non-Latin characters that resemble Latin letters), and formatting inherited from styles
 
 ## Intended Use
-Anyone who wants to inspect the contents of a Word document. A result describes what is in the file; it does not establish why the content is there.
+Anyone who wants to inspect the contents of a file. A result describes what is in the file; it does not establish why the content is there.
 
 ## Original Creation Date
 This repository was created and this concept was documented in 2026. All commits are timestamped on GitHub as proof of original authorship.
